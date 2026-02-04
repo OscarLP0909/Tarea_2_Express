@@ -57,22 +57,44 @@ app.post("/create", (req: Request, res: Response) => {
 });
 
 app.post("/delete", (req: Request, res: Response) => {
-  // - If no req.body.index is given or it's unmatched, return 200
+  // - If no req.body.index is given or it's unmatched, return 400
   // - If req.body.index is matched, remove the task from the file
   // IMPORTANT: This is a POST, the data is in the body!
   // TODO
+  const index = Number(req.body.index);
+  const tasks: Task[] = readTasks();
+
+  if(!req.body.index) {
+    res.statusCode = 400
+    res.send(`No se ha enviado un índice`);
+  } else if (isNaN(index) || index < 0 || index >= tasks.length) {
+    res.statusCode = 400
+    res.send(`Índice no válido`);
+  } else {
+    const deleted = tasks.splice(index, 1);
+    writeTasks(tasks);
+    res.statusCode = 200;
+    res.send(tasks);
+  }
 });
 
 app.post("/update", (req: Request, res: Response) => {
-  // - Follows the same rules as creation (name is required, description is optional)
-  // - If no name is given, a 400 is returned
-  // - The task, as given, replaces the current definition of the file for the task
-  // - The body includes an index to know which task must be replaced with the new definition
-  // - The file is left with the same number of tasks
-  // - If the index is not given, is invalid or out of bounds, a 400 is returned
-  // - If the operation is successful, a 200 is returned
-  // IMPORTANT: This is a POST, the data is in the body!
-  // TODO
+
+  const index = Number(req.body.index);
+  const tasks: Task[] = readTasks();
+
+  if(!req.body.index || !req.body.name) {
+    res.statusCode = 400;
+    res.send(`Necesita introducir índice y nombre`);
+  } else if (isNaN(index) || index < 0 || index >= tasks.length) {
+    res.statusCode = 400;
+    res.send(`El índice es inválido`);
+  } else {
+    tasks[index] = req.body;
+    writeTasks(tasks);
+    res.statusCode = 200;
+    res.send(tasks);
+  }
 });
 
 // Start only if it's executed directly, not imported
