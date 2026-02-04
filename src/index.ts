@@ -90,7 +90,7 @@ app.post("/update", (req: Request, res: Response) => {
     res.statusCode = 400;
     res.send(`El índice es inválido`);
   } else {
-    tasks[index] = req.body;
+    tasks[index] = {"name": req.body.name, "description": req.body.description};
     writeTasks(tasks);
     res.statusCode = 200;
     res.send(tasks);
