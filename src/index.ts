@@ -64,26 +64,28 @@ function createTarea(name: string, description: string) {
 }
 
 app.post("/delete", (req: Request, res: Response) => {
-  // - If no req.body.index is given or it's unmatched, return 400
-  // - If req.body.index is matched, remove the task from the file
-  // IMPORTANT: This is a POST, the data is in the body!
-  // TODO
+  if(req.body.index === undefined || req.body.index === null) {
+    res.statusCode = 400
+    res.send({"error": "Hace falta un índice"});
+    return;
+  }
   const index = Number(req.body.index);
   const tasks: Task[] = readTasks();
-
-  if(!req.body.index) {
+    if (isNaN(index) || index < 0 || index >= tasks.length) {
     res.statusCode = 400
-    res.send(`No se ha enviado un índice`);
-  } else if (isNaN(index) || index < 0 || index >= tasks.length) {
-    res.statusCode = 400
-    res.send(`Índice no válido`);
+    res.send({"error": "Índice no válido"});
   } else {
-    const deleted = tasks.splice(index, 1);
-    writeTasks(tasks);
+    const deleted = deleteTask(tasks, index);
     res.statusCode = 200;
-    res.send(tasks);
+    res.send(deleted);
   }
 });
+
+function deleteTask(tasks: Task[], index: number) {
+  tasks.splice(index, 1);
+  writeTasks(tasks);
+  return {"message": "Se ha eliminado correctamente"};
+}
 
 app.post("/update", (req: Request, res: Response) => {
   if(req.body.index === undefined || req.body.index === null || !req.body.name ) {
