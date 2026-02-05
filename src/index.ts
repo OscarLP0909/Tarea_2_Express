@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import { readTasks, writeTasks } from "./file-ops";
 import { Task } from "./types";
+import { error } from "console";
 
 const app: Express = express();
 const port: number = 3000;
@@ -15,46 +16,52 @@ app.get("/", (req: Request, res: Response) => {
 // All endpoints will use the file tasks.json as a way to persist the data
 
 app.get("/search", (req: Request, res: Response) => {
-  // - Get all tasks if no index is given
-  // - If req.query.index is provided, use that to get a task.
-  // - If the index is out of bounds, return 404
-  // TODO
-  const tasks: Task[] = readTasks();
-  const index = Number(req.query.index);
-
   if(!req.query.index){
-    res.send(tasks);
+    const result = readAllTasks();
+    res.send(result);
   } else {
-  if (isNaN(index) || index < 0 || index >= tasks.length) {
-      res.statusCode = 404;
-      res.send(`<p>Índice incorrecto</p>`);
+    const index = Number(req.query.index);
+    const tasks = readAllTasks();
+    if (isNaN(index) || index < 0 || index >= tasks.length) {
+      res.statusCode = 400;
+      res.send({"error": "Índice inválido"});
     } else {
-      res.send(tasks[index]);
+      const result = readTaskWithIndex(index, tasks);
+      res.send(result);
     }
   }
 });
 
-app.post("/create", (req: Request, res: Response) => {
-  // - A task is given in the body (name + description)
-  // - If the name is not in the body or is empty, a 400 will be returned
-  // - The description can be empty or not present
-  // - The task is written to the file and 201 is returned
-  // REMEMBER: The body is given URL Encoded (from a form)
-  // TODO
-  const name = req.body.name;
-  const body = req.body;
+function readAllTasks() {
   const tasks: Task[] = readTasks();
+  return tasks;
+}
+
+function readTaskWithIndex(index: number, tasks: Task[]) {
+  const result = tasks[index];
+  return result;
+}
+
+app.post("/create", (req: Request, res: Response) => {
+  const name = req.body.name;
+  const description = req.body.description;
 
   if(!name) {
     res.statusCode = 400;
-    res.send(`<p>Necesita un nombre la tarea`);
+    res.send({"error": "El nombre es obligatorio"});
   } else {
-    tasks.push(body);
-    writeTasks(tasks);
+    const result = createTarea(name, description);
     res.statusCode = 201;
-    res.send(tasks);
+    res.send(result);
   }
 });
+
+function createTarea(name: string, description: string) {
+    const tasks: Task[] = readTasks();
+    tasks.push({"name": name, "description": description});
+    writeTasks(tasks);
+    return({"name": name, "description": description});
+}
 
 app.post("/delete", (req: Request, res: Response) => {
   // - If no req.body.index is given or it's unmatched, return 400
@@ -79,23 +86,30 @@ app.post("/delete", (req: Request, res: Response) => {
 });
 
 app.post("/update", (req: Request, res: Response) => {
-
-  const index = Number(req.body.index);
+  if(req.body.index === undefined || req.body.index === null || !req.body.name ) {
+    res.statusCode = 400;
+    res.send({"error": "Necesita introducir índice y nombre"});
+    return;
+  } 
   const tasks: Task[] = readTasks();
-
-  if(!req.body.index || !req.body.name) {
+  const index = Number(req.body.index);
+  if (isNaN(index) || index < 0 || index >= tasks.length) {
     res.statusCode = 400;
-    res.send(`Necesita introducir índice y nombre`);
-  } else if (isNaN(index) || index < 0 || index >= tasks.length) {
-    res.statusCode = 400;
-    res.send(`El índice es inválido`);
+    res.send({"error": "Índice no válido"});
   } else {
-    tasks[index] = {"name": req.body.name, "description": req.body.description};
-    writeTasks(tasks);
+    const name = req.body.name;
+    const description = req.body.description;
+    const result = updateTask(name, description, tasks, index)
     res.statusCode = 200;
-    res.send(tasks);
+    res.send(result);
   }
 });
+
+function updateTask(name: string, description: string, tasks:Task[], index: number) {
+  tasks[index] = {"name": name, "description": description};
+  writeTasks(tasks);
+  return tasks[index];
+}
 
 // Start only if it's executed directly, not imported
 if (require.main === module) {
