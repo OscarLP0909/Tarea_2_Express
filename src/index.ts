@@ -15,7 +15,7 @@ app.get("/", (req: Request, res: Response) => {
 
 // All endpoints will use the file tasks.json as a way to persist the data
 
-app.get("/search", (req: Request, res: Response) => {
+app.get("/tasks", (req: Request, res: Response) => {
   if(!req.query.index){
     const result = readAllTasks();
     res.send(result);
@@ -42,9 +42,8 @@ function readTaskWithIndex(index: number, tasks: Task[]) {
   return result;
 }
 
-app.post("/create", (req: Request, res: Response) => {
-  const name = req.body.name;
-  const description = req.body.description;
+app.post("/tasks", (req: Request, res: Response) => {
+  const { name, description }= req.body;
 
   if(!name) {
     res.statusCode = 400;
@@ -63,31 +62,20 @@ function createTarea(name: string, description: string) {
     return({"name": name, "description": description});
 }
 
-app.post("/delete", (req: Request, res: Response) => {
-  if(req.body.index === undefined || req.body.index === null) {
-    res.statusCode = 400
-    res.send({"error": "Hace falta un índice"});
-    return;
-  }
-  const index = Number(req.body.index);
+app.delete("/tasks/:index", (req: Request, res: Response) => {
+  const { index } = req.params;
+
+  const indexNumber = Number(index);
   const tasks: Task[] = readTasks();
-    if (isNaN(index) || index < 0 || index >= tasks.length) {
-    res.statusCode = 400
-    res.send({"error": "Índice no válido"});
-  } else {
-    const deleted = deleteTask(tasks, index);
-    res.statusCode = 200;
-    res.send(deleted);
-  }
-});
+  const updatedTasks = tasks.filter((_, taskIndex) => taskIndex !== indexNumber); // Crea un nuevo array en el que solo haya tareas que cumplan con la condición de que su índice no sea igual al índice puesto en la URL
+  
+  if(tasks.length > updatedTasks.length) {
+    writeTasks(updatedTasks);
+    }
+    res.sendStatus(200);
+  });
 
-function deleteTask(tasks: Task[], index: number) {
-  tasks.splice(index, 1);
-  writeTasks(tasks);
-  return {"message": "Se ha eliminado correctamente"};
-}
-
-app.post("/update", (req: Request, res: Response) => {
+app.put("/update", (req: Request, res: Response) => {
   if(req.body.index === undefined || req.body.index === null || !req.body.name ) {
     res.statusCode = 400;
     res.send({"error": "Necesita introducir índice y nombre"});
